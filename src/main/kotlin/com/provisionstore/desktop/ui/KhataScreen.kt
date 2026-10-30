@@ -83,6 +83,7 @@ fun KhataScreen(store: Store, onMessage: (String) -> Unit) {
                 customer = selected,
                 onPay = { paying = true },
                 onPrint = { onMessage("Statement printed.") },
+                onMessage = onMessage,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
         }
@@ -118,10 +119,22 @@ private fun CustomerAccount(
     customer: Customer,
     onPay: () -> Unit,
     onPrint: () -> Unit,
+    onMessage: (String) -> Unit,
     modifier: Modifier,
 ) {
     val revision = store.revision
     val ledger = remember(revision, customer.id) { store.ledgerFor(customer.id) }
+
+    fun statementLines(): List<String> = buildList {
+        add("Account statement - ${customer.name}")
+        add("")
+        ledger.sortedBy { it.createdAt }.forEach { e ->
+            val kind = if (e.amount < 0) "Paid" else "Credit"
+            add("${dateTime(e.createdAt)}  ${e.note}  $kind ${kotlin.math.abs(e.amount).money()}")
+        }
+        add("")
+        add("Balance due: ${customer.balance.money()}")
+    }
 
     Column(modifier) {
         Text(customer.name, style = MaterialTheme.typography.headlineSmall)
@@ -139,23 +152,13 @@ private fun CustomerAccount(
                 Text("Record payment")
             }
             OutlinedButton(onClick = {
-                printLines(
-                    buildList {
-                        add("Account statement - ${customer.name}")
-                        add("")
-                        ledger.sortedBy { it.createdAt }.forEach { e ->
-                            val kind = if (e.amount < 0) "Paid" else "Credit"
-                            add("${dateTime(e.createdAt)}  ${e.note}  $kind ${kotlin.math.abs(e.amount).money()}")
-                        }
-                        add("")
-                        add("Balance due: ${customer.balance.money()}")
-                    }
-                )
+                printLines(statementLines())
                 onPrint()
             }) {
                 Icon(Icons.Filled.Print, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
                 Text("Print statement")
             }
+            ReceiptPrintButton(lines = { statementLines() }, onMessage = onMessage)
         }
         Spacer(Modifier.height(12.dp))
         Text("History", style = MaterialTheme.typography.titleMedium)

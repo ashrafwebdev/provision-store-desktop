@@ -112,6 +112,21 @@ fun DayScreen(store: Store, onMessage: (String) -> Unit) {
             }
         ).sortedByDescending { it.time }
 
+    fun reportLines(): List<String> = buildList {
+        add("Provision Store - ${dayLabel(day)}")
+        add("")
+        add("Sales: ${salesTotal.money()} (${sales.size} bills)")
+        add("   Cash: ${modeTotal(PaymentMode.CASH).money()}")
+        add("   UPI: ${modeTotal(PaymentMode.UPI).money()}")
+        add("   Credit: ${modeTotal(PaymentMode.CREDIT).money()}")
+        add("Payments received: ${received.money()}")
+        add("Purchases: ${purchaseTotal.money()}")
+        add("Expenses: ${expenseTotal.money()}")
+        add("Left after purchases and expenses: ${leftover.money()}")
+        add("")
+        rows.forEach { add("${timeOnly(it.time)}  ${it.title}  ${it.amount.money()}") }
+    }
+
     // Entries are recorded at the current time of day, on the selected date.
     fun entryTime(): Long = day + (System.currentTimeMillis() - startOfToday())
 
@@ -149,27 +164,11 @@ fun DayScreen(store: Store, onMessage: (String) -> Unit) {
                 Icon(Icons.Filled.Receipt, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
                 Text("Expense")
             }
-            OutlinedButton(onClick = {
-                printLines(
-                    buildList {
-                        add("Provision Store - ${dayLabel(day)}")
-                        add("")
-                        add("Sales: ${salesTotal.money()} (${sales.size} bills)")
-                        add("   Cash: ${modeTotal(PaymentMode.CASH).money()}")
-                        add("   UPI: ${modeTotal(PaymentMode.UPI).money()}")
-                        add("   Credit: ${modeTotal(PaymentMode.CREDIT).money()}")
-                        add("Payments received: ${received.money()}")
-                        add("Purchases: ${purchaseTotal.money()}")
-                        add("Expenses: ${expenseTotal.money()}")
-                        add("Left after purchases and expenses: ${leftover.money()}")
-                        add("")
-                        rows.forEach { add("${timeOnly(it.time)}  ${it.title}  ${it.amount.money()}") }
-                    }
-                )
-            }) {
+            OutlinedButton(onClick = { printLines(reportLines()) }) {
                 Icon(Icons.Filled.Print, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
                 Text("Print day report")
             }
+            ReceiptPrintButton(lines = { reportLines() }, onMessage = onMessage)
             OutlinedButton(onClick = {
                 val target = chooseBackupTarget() ?: return@OutlinedButton
                 store.backupTo(target)
