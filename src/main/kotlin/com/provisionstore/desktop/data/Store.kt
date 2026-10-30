@@ -4,6 +4,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.PreparedStatement
@@ -222,6 +225,18 @@ class Store(val file: File) : AutoCloseable {
     /** Copies the database file. Safe to call while the app is open: no transaction is pending. */
     fun backupTo(target: File) {
         file.copyTo(target, overwrite = true)
+    }
+
+    /** Keeps one copy per day in [folder] and removes the oldest beyond [keep]. */
+    fun dailyBackup(folder: File, keep: Int = 14) {
+        folder.mkdirs()
+        val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val target = File(folder, "provision-$stamp.db")
+        if (!target.exists()) file.copyTo(target)
+        folder.listFiles { f -> f.name.startsWith("provision-") && f.name.endsWith(".db") }
+            ?.sortedByDescending { it.name }
+            ?.drop(keep)
+            ?.forEach { it.delete() }
     }
 
     // ---- Helpers ----

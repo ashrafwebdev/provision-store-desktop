@@ -40,6 +40,8 @@ import com.provisionstore.app.util.startOfToday
 import com.provisionstore.app.util.timeOnly
 import com.provisionstore.desktop.data.PaymentMode
 import com.provisionstore.desktop.data.Store
+import java.io.File
+import kotlin.system.exitProcess
 
 /** One line in the day's entries list. */
 private class DayRow(
@@ -56,6 +58,7 @@ fun DayScreen(store: Store, onMessage: (String) -> Unit) {
     var day by remember { mutableStateOf(startOfToday()) }
     var adding by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf<DayRow?>(null) }
+    var restoreFrom by remember { mutableStateOf<File?>(null) }
 
     val end = day + DAY_MS
     val sales = remember(revision, day) { store.sales(day, end) }
@@ -167,6 +170,14 @@ fun DayScreen(store: Store, onMessage: (String) -> Unit) {
                 Icon(Icons.Filled.Print, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
                 Text("Print day report")
             }
+            OutlinedButton(onClick = {
+                val target = chooseBackupTarget() ?: return@OutlinedButton
+                store.backupTo(target)
+                onMessage("Backup saved to ${target.name}.")
+            }) { Text("Back up") }
+            OutlinedButton(onClick = {
+                restoreFrom = chooseBackupSource()
+            }) { Text("Restore") }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -190,6 +201,21 @@ fun DayScreen(store: Store, onMessage: (String) -> Unit) {
                 }
             }
         }
+    }
+
+    restoreFrom?.let { source ->
+        ConfirmDialog(
+            title = "Restore this backup?",
+            text = "All current data on this computer is replaced with ${source.name}. The app will close; open it again to see the restored data.",
+            confirmText = "Restore and close",
+            onConfirm = {
+                // Restoring overwrites the database file, so the connection must close first.
+                store.close()
+                source.copyTo(store.file, overwrite = true)
+                exitProcess(0)
+            },
+            onDismiss = { restoreFrom = null },
+        )
     }
 
     when (adding) {

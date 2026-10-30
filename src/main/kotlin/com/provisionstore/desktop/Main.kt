@@ -36,6 +36,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.provisionstore.desktop.data.Store
+import java.io.File
 import com.provisionstore.desktop.ui.DayScreen
 import com.provisionstore.desktop.ui.ItemsScreen
 import com.provisionstore.desktop.ui.KhataScreen
@@ -53,7 +54,9 @@ private enum class Tab(val label: String, val icon: ImageVector) {
 }
 
 fun main() = application {
-    val store = remember { Store(Store.defaultFile()) }
+    val store = remember {
+        Store(Store.defaultFile()).also { it.dailyBackup(File(it.file.parentFile, "backups")) }
+    }
     Window(
         onCloseRequest = {
             store.close()
