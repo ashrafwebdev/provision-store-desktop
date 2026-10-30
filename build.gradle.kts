@@ -8,8 +8,8 @@ plugins {
     id("org.jetbrains.compose") version "1.7.0"
 }
 
-// The installer version comes from CI (-PappVersion=1.<run>.0). Local builds use 1.0.0.
-val appVersion: String = providers.gradleProperty("appVersion").getOrElse("1.0.0")
+// The installer version comes from CI (APP_VERSION=1.<run>.0). Local builds use 1.0.0.
+val appVersion: String = System.getenv("APP_VERSION") ?: "1.0.0"
 
 // Writes AppVersion.kt so the app knows its own version for the self-update check.
 val generatedSrc = layout.buildDirectory.dir("generated/appversion/kotlin")
